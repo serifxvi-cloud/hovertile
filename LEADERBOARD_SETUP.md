@@ -1,10 +1,23 @@
-# VOIDLINE global leaderboard setup
+# VOIDLINE seasons, ranks, and global leaderboard setup
 
-The game works immediately with a per-device top-10 leaderboard. To share scores between players and devices, connect a Supabase project.
+VOIDLINE now assigns each run to a UTC calendar quarter (for example, `2026-S4`). Scores are shown on that season's board. Pilot rank is derived from score:
 
-## 1. Create the table
+| Rank | Season score |
+| --- | ---: |
+| Cadet | 0 |
+| Pilot | 500 |
+| Ace | 2,500 |
+| Vanguard | 10,000 |
+| Elite | 30,000 |
+| Legend | 75,000 |
 
-In Supabase, open **SQL Editor → New query** and run:
+Defeating each of the five boss types unlocks its matching spacecraft finish on that device. Selecting a finish changes the player's ship colors. The run submission includes the season ID and the boss finishes recorded on that device.
+
+The game works without a backend using a per-device seasonal leaderboard and local boss rewards. Global standings require a configured Supabase project; until then, the game labels the board and rank as local.
+
+## 1. Create or update the table
+
+In Supabase, open **SQL Editor → New query** and run this setup. It creates the table for new projects and adds the seasonal fields to existing leaderboard tables.
 
 ```sql
 create table if not exists public.voidline_leaderboard (
@@ -15,16 +28,27 @@ create table if not exists public.voidline_leaderboard (
   kills integer not null default 0 check (kills >= 0),
   survived_seconds integer not null default 0 check (survived_seconds >= 0),
   ship text not null default 'aurora',
+  season_id text not null default 'legacy',
+  bosses_defeated text[] not null default '{}',
   created_at timestamptz not null default now()
 );
 
+alter table public.voidline_leaderboard
+  add column if not exists season_id text not null default 'legacy',
+  add column if not exists bosses_defeated text[] not null default '{}';
+
+create index if not exists voidline_leaderboard_season_score_idx
+  on public.voidline_leaderboard (season_id, score desc, level desc, survived_seconds desc);
+
 alter table public.voidline_leaderboard enable row level security;
 
+drop policy if exists "Anyone can read leaderboard" on public.voidline_leaderboard;
 create policy "Anyone can read leaderboard"
 on public.voidline_leaderboard for select
 to anon, authenticated
 using (true);
 
+drop policy if exists "Anyone can submit a score" on public.voidline_leaderboard;
 create policy "Anyone can submit a score"
 on public.voidline_leaderboard for insert
 to anon, authenticated
@@ -34,8 +58,12 @@ with check (
   and level >= 1
   and kills >= 0
   and survived_seconds >= 0
+  and season_id ~ '^[0-9]{4}-S[1-4]$'
+  and bosses_defeated <@ array['warden','artillery','weaver','leviathan','eclipse']::text[]
 );
 ```
+
+Legacy scores remain in the table, but are excluded from the quarterly boards.
 
 ## 2. Add the public project settings
 
@@ -46,14 +74,14 @@ const SUPABASE_URL='';
 const SUPABASE_ANON_KEY='';
 ```
 
-Paste your Supabase **Project URL** and **anon/public key** into those two strings. These are available in your Supabase project's API settings.
+Paste your Supabase **Project URL** and **anon/public key** into those two strings. Find them in the Supabase project's API settings.
 
-**Never put a service-role key in a public HTML file.** The anon/public key is intended for browser use and is restricted by the table's Row Level Security policies.
+**Never put a service-role key in a public HTML file.** The anon/public key is intended for browser use and is constrained by the table's Row Level Security policies.
 
 ## 3. Publish
 
-Commit the updated `index.html` and this setup file to the repository. GitHub Pages will then load the cloud leaderboard once Supabase is configured.
+Commit `index.html` and this setup file. Once GitHub Pages deploys the update and the Supabase settings are filled in, players can see and submit scores to the shared seasonal board.
 
-## Important fairness note
+## Fairness and identity
 
-This lightweight browser implementation lets anyone submit a score, so it is suitable for a casual community leaderboard but is not cheat-proof. For a competitive leaderboard, move score validation and inserts to a Supabase Edge Function that verifies a server-signed run result, and add rate limits / abuse controls. Do not expose privileged database credentials in the game.
+This browser-only version accepts scores submitted by visitors and uses callsigns rather than authenticated accounts. Boss unlocks are stored in that browser. It is suitable for a casual community season, but scores and rewards are not cheat-proof or transferable between devices. For verified competitive seasons and account-wide reward inventories, use authenticated player accounts and move score validation and reward grants into a Supabase Edge Function. Do not expose privileged database credentials in the game.
