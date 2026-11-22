@@ -291,6 +291,20 @@ if(selectedShip==='aurora'){
  polygon([[-8,-8],[-25,-1],[-16,5],[-7,3]],skin.secondary,'#eafff6aa',.8);polygon([[8,-8],[25,-1],[16,5],[7,3]],skin.secondary,'#eafff6aa',.8);
  for(let side of [-1,1]){ctx.strokeStyle=skin.accent;ctx.globalAlpha=.85;ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(side*9,1);ctx.lineTo(side*20,4);ctx.lineTo(side*14,10);ctx.stroke()}ctx.globalAlpha=1;
 }
+/* Reinforced assault silhouette: swept armor blades, forward lance and twin cannon rails. */
+ctx.save();ctx.lineJoin='miter';ctx.shadowColor=skin.glow;ctx.shadowBlur=13;
+const fin=selectedShip==='wraith'?[[7,-10],[39,8],[29,14],[11,3]]:selectedShip==='bastion'?[[10,-9],[36,-4],[39,15],[15,14]]:selectedShip==='seraph'?[[8,-9],[36,-1],[27,9],[13,5]]:[[9,-8],[35,-3],[28,10],[13,5]];
+for(const side of [-1,1]){
+ const pts=fin.map(([x,y])=>[x*side,y]);polygon(pts,hull,skin.accent,1.25);
+ polygon([[side*15,-4],[side*30,0],[side*24,5],[side*14,3]],skin.dark,skin.accent+'aa',.8);
+ ctx.strokeStyle=skin.accent;ctx.lineWidth=1.15;ctx.beginPath();ctx.moveTo(side*13,-3);ctx.lineTo(side*29,2);ctx.lineTo(side*23,7);ctx.stroke();
+ ctx.fillStyle=skin.accent;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(side*(selectedShip==='bastion'?31:26),4,selectedShip==='bastion'?2.8:2,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle=skin.dark;ctx.lineWidth=3.2;ctx.beginPath();ctx.moveTo(side*12,-1);ctx.lineTo(side*17,-9);ctx.stroke();
+ ctx.strokeStyle=skin.accent;ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(side*12,-1);ctx.lineTo(side*17,-9);ctx.stroke();
+}
+polygon([[0,-39],[4,-25],[0,-20],[-4,-25]],hull,skin.accent,1);
+ctx.fillStyle=skin.accent;ctx.shadowColor=skin.glow;ctx.shadowBlur=15;ctx.beginPath();ctx.arc(0,-29,1.8,0,Math.PI*2);ctx.fill();
+ctx.restore();
 ctx.shadowBlur=9;ctx.fillStyle=skin.dark;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(5,4);ctx.lineTo(0,10);ctx.lineTo(-5,4);ctx.closePath();ctx.fill();
 let glass=ctx.createLinearGradient(-4,-14,4,7);glass.addColorStop(0,'#ffffff');glass.addColorStop(.32,skin.accent);glass.addColorStop(1,skin.secondary);ctx.fillStyle=glass;ctx.shadowColor=skin.accent;ctx.shadowBlur=13;ctx.beginPath();ctx.moveTo(0,-17);ctx.quadraticCurveTo(5,-7,3,2);ctx.lineTo(0,5);ctx.lineTo(-3,2);ctx.quadraticCurveTo(-5,-7,0,-17);ctx.fill();
 /* Layered flight-deck detailing: armor seams, wing inlays and engine hardware. */
